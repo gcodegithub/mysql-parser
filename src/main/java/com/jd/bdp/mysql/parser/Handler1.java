@@ -14,7 +14,10 @@ import parser.EntryPrinter;
 import parser.HBaseOperator;
 import parser.ParserConfig;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -79,6 +82,22 @@ public class Handler1 implements MagpieExecutor {
         hBaseOP.getConf().set("hbase.zookeeper.quorum","localhost");
         hBaseOP.getConf().set("hbase.zookeeper.property.clientPort","2181");
         hBaseOP.getConf().set("dfs.socket.timeout", "180000");
+        try {
+            InputStream in = new BufferedInputStream(new FileInputStream("conf/parser.properties"));
+            Properties pro = new Properties();
+            pro.load(in);
+            if(!pro.getProperty("hbase.rootdir").equals(""))
+                hBaseOP.getConf().set("hbase.rootdir",pro.getProperty("hbase.rootdir"));
+            if(!pro.getProperty("hbase.zookeeper.quorum").equals(""))
+                hBaseOP.getConf().set("hbase.zookeeper.quorum",pro.getProperty("hbase.zookeeper.quorum"));
+            if(!pro.getProperty("hbase.zookeeper.property.clientPort").equals(""))
+                hBaseOP.getConf().set("hbase.zookeeper.property.clientPort",pro.getProperty("hbase.zookeeper.property.clientPort"));
+            if(!pro.getProperty("dfs.socket.timeout").equals(""))
+                hBaseOP.getConf().set("dfs.socket.timeout",pro.getProperty("dfs.socket.timeout"));
+        } catch (Exception e) {
+            logger.error("load the hbase conf properties failed!!!");
+            e.printStackTrace();
+        }
         bytesQueue = new LinkedBlockingQueue<byte[]>();
         rowKeyQueue = new LinkedBlockingQueue<byte[]>();
     }
@@ -91,6 +110,22 @@ public class Handler1 implements MagpieExecutor {
         hBaseOP.getConf().set("hbase.zookeeper.quorum","localhost");
         hBaseOP.getConf().set("hbase.zookeeper.property.clientPort","2181");
         hBaseOP.getConf().set("dfs.socket.timeout", "180000");
+        try {
+            InputStream in = new BufferedInputStream(new FileInputStream("conf/parser.properties"));
+            Properties pro = new Properties();
+            pro.load(in);
+            if(!pro.getProperty("hbase.rootdir").equals(""))
+                hBaseOP.getConf().set("hbase.rootdir",pro.getProperty("hbase.rootdir"));
+            if(!pro.getProperty("hbase.zookeeper.quorum").equals(""))
+                hBaseOP.getConf().set("hbase.zookeeper.quorum",pro.getProperty("hbase.zookeeper.quorum"));
+            if(!pro.getProperty("hbase.zookeeper.property.clientPort").equals(""))
+                hBaseOP.getConf().set("hbase.zookeeper.property.clientPort",pro.getProperty("hbase.zookeeper.property.clientPort"));
+            if(!pro.getProperty("dfs.socket.timeout").equals(""))
+                hBaseOP.getConf().set("dfs.socket.timeout",pro.getProperty("dfs.socket.timeout"));
+        } catch (Exception e) {
+            logger.error("load the hbase conf properties failed!!!");
+            e.printStackTrace();
+        }
         bytesQueue = new LinkedBlockingQueue<byte[]>();
         rowKeyQueue = new LinkedBlockingQueue<byte[]>();
     }
