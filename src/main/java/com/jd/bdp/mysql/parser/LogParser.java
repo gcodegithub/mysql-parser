@@ -19,5 +19,4 @@ public class LogParser {
         Topology topology = new Topology(handler);
         topology.run();
     }
-
 }
