@@ -38,7 +38,7 @@ public class HBaseOperator {
     public  String binlogXidCol = "BinlogXid";
     public  String eventXidCol = "EventXidRowKey";
     public  String eventRowCol = "EventRowKey";
-    public  String entryRowCol = "EntryRowKey";
+    public  String entryRowCol = "EntryRowKey";//is checkpoint parser's pos column and at the same time is the entry(hbase table) parser's entry's column
     public  String eventBytesCol = "eventBytes";
 
     //constructor and getter and setter

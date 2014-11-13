@@ -1,0 +1,17 @@
+{
+    "namespace": "com.jd.bdp.mysql.parser.avro",
+    "type": "record",
+    "name": "EventEntryAvro",
+    "fields": [
+            {"name": "dbName", "type": "string"},
+            {"name": "schema", "type": "string"},
+            {"name": "tableName", "type": "string"},
+            {"name": "operation","type": "string"},
+            {"name": "dbOptTimestamp", "type": "long"},
+            {"name": "dmlHBaseOptTimestamp", "type": "long"},
+            {"name": "ddlSql", "type": ["string", "null"]},
+            {"name": "error", "type": ["string", "null"]},
+            {"name": "source", "type": [{"type": "map","values": ["string", "null"]},"null"]},
+            {"name": "current", "type": [{"type": "map","values": ["string", "null"]},"null"]}
+            ]
+}

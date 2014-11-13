@@ -1,7 +1,14 @@
 package com.jd.bdp.mysql.parser;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.jd.bdp.magpie.MagpieExecutor;
+import com.jd.bdp.mysql.parser.avro.EventEntryAvro;
+import com.sun.tools.corba.se.idl.StringGen;
 import monitor.ParserMonitor;
+import net.sf.json.JSONObject;
+import org.apache.avro.io.*;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
@@ -90,6 +97,16 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void prepare(String id) throws Exception {
+
+        //adjust the config
+        MagpieConfigJson configJson = new MagpieConfigJson(id);
+        JSONObject jRoot = configJson.getJson();
+        JSONObject jContent = jRoot.getJSONObject("info").getJSONObject("content");
+        configer.setHbaseRootDir(jContent.getString("HbaseRootDir"));
+        configer.setHbaseDistributed(jContent.getString("HbaseDistributed"));
+        configer.setHbaseZkQuorum(jContent.getString("HbaseZKQuorum"));
+        configer.setHbaseZkPort(jContent.getString("HbaseZKPort"));
+        configer.setDfsSocketTimeout(jContent.getString("DfsSocketTimeout"));
 
         //initialize hbase
         hBaseOP = new HBaseOperator(id);
@@ -454,9 +471,11 @@ public class HandlerForMagpie implements MagpieExecutor {
                             ",-----> table name : " +
                             entry.getHeader().getTableName()
             );
-            String entryString = EntryToString(entry);
+//            String entryString = entryToString(entry);
+//            Put put = new Put(globalWritePos);
+//            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), Bytes.toBytes(entryString));
             Put put = new Put(globalWritePos);
-            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), Bytes.toBytes(entryString));
+            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), getBytesFromEntryToAvro(entry));
             puts.add(put);
             globalWritePos = Bytes.toBytes(Bytes.toLong(globalWritePos) + 1L);
             //persistence read pos
@@ -478,8 +497,135 @@ public class HandlerForMagpie implements MagpieExecutor {
     }
 
     //Entry to String
-    private String EntryToString(CanalEntry.Entry entry) {
+    private String entryToString(CanalEntry.Entry entry) {
         return(EntryPrinter.printEntry(entry));
+    }
+
+    private String getEntryType(CanalEntry.Entry entry) {
+        try {
+            CanalEntry.RowChange rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
+            String operationType = "";
+            switch (rowChange.getEventType()) {
+                case INSERT:
+                    return "INSERT";
+                case UPDATE:
+                    return "UPDATE";
+                case DELETE:
+                    return "DELETE";
+                case CREATE:
+                    return "CREATE";
+                case ALTER:
+                    return "ALTER";
+                case ERASE:
+                    return "ERASE";
+                case QUERY:
+                    return "QUERY";
+                case TRUNCATE:
+                    return "TRUNCATE";
+                case RENAME:
+                    return "RENAME";
+                case CINDEX:
+                    return "CINDEX";
+                case DINDEX:
+                    return "DINDEX";
+                default:
+                    return "UNKNOWN";
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return "NULL";
+    }
+
+    private EventEntryAvro entryToAvro(CanalEntry.Entry entry) {
+        EventEntryAvro entryAvro = new EventEntryAvro();
+        entryAvro.setDbName(entry.getHeader().getSchemaName());
+        entryAvro.setSchema$(entry.getHeader().getSchemaName());
+        entryAvro.setTableName(entry.getHeader().getTableName());
+        entryAvro.setOperation(getEntryType(entry));
+        entryAvro.setDbOptTimestamp(entry.getHeader().getExecuteTime());
+        entryAvro.setDmlHBaseOptTimestamp(new Date().getTime());
+        try {
+            CanalEntry.RowChange rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
+            if(rowChange.getIsDdl()) entryAvro.setDdlSql(rowChange.getSql());
+            else entryAvro.setDdlSql("");
+            entryAvro.setError("");
+            //current and source
+            for(CanalEntry.RowData rowData : rowChange.getRowDatasList()) {
+                if(rowChange.getEventType() == CanalEntry.EventType.DELETE) {
+                    List<CanalEntry.Column> columns = rowData.getBeforeColumnsList();
+                    Map<CharSequence, CharSequence> currentCols = new HashMap<CharSequence, CharSequence>();
+                    Map<CharSequence, CharSequence> sourceCols = new HashMap<CharSequence, CharSequence>();
+                    for(CanalEntry.Column column : columns) {
+                        sourceCols.put(column.getName(),column.getValue());
+                        if(column.getIsKey()) {
+                            currentCols.put(column.getName(),column.getValue());
+                        }
+                    }
+                    entryAvro.setCurrent(currentCols);
+                    entryAvro.setSource(sourceCols);
+                } else if (rowChange.getEventType() == CanalEntry.EventType.INSERT) {
+                    List<CanalEntry.Column> columns = rowData.getAfterColumnsList();
+                    Map<CharSequence, CharSequence> currentCols = new HashMap<CharSequence, CharSequence>();
+                    Map<CharSequence, CharSequence> sourceCols = new HashMap<CharSequence, CharSequence>();
+                    for(CanalEntry.Column column : columns) {
+                        currentCols.put(column.getName(),column.getValue());
+                    }
+                    entryAvro.setSource(sourceCols);
+                    entryAvro.setCurrent(currentCols);
+                } else if(rowChange.getEventType() == CanalEntry.EventType.UPDATE) {
+                    List<CanalEntry.Column> columnsSource = rowData.getBeforeColumnsList();
+                    List<CanalEntry.Column> columnsCurrent = rowData.getAfterColumnsList();
+                    Map<CharSequence, CharSequence> sourceCols = new HashMap<CharSequence, CharSequence>();
+                    Map<CharSequence, CharSequence> currentCols = new HashMap<CharSequence, CharSequence>();
+                    for(int i=0,j=0;i<=columnsCurrent.size()-1 || j<=columnsSource.size()-1;i++,j++) {
+                        if(i<=columnsCurrent.size()-1)
+                            currentCols.put(columnsCurrent.get(i).getName(),columnsCurrent.get(i).getValue());
+                        if(j<=columnsSource.size()-1)
+                            sourceCols.put(columnsSource.get(j).getName(),columnsSource.get(j).getValue());
+                    }
+                } else {
+                    Map<CharSequence, CharSequence> sourceCols = new HashMap<CharSequence, CharSequence>();
+                    Map<CharSequence, CharSequence> currentCols = new HashMap<CharSequence, CharSequence>();
+                    entryAvro.setCurrent(currentCols);
+                    entryAvro.setSource(sourceCols);
+                }
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return(entryAvro);
+    }
+
+    private byte[] getBytesFromAvro(EventEntryAvro avro) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out,null);
+        DatumWriter<EventEntryAvro> writer = new SpecificDatumWriter<EventEntryAvro>(EventEntryAvro.getClassSchema());
+        try {
+            writer.write(avro,encoder);
+            encoder.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        byte[] value = out.toByteArray();
+        return value;
+    }
+
+    private EventEntryAvro getAvroFromBytes(byte[] value) {
+        SpecificDatumReader <EventEntryAvro> reader = new SpecificDatumReader<EventEntryAvro>(EventEntryAvro.getClassSchema());
+        Decoder decoder = DecoderFactory.get().binaryDecoder(value,null);
+        EventEntryAvro avro = null;
+        try {
+            avro = reader.read(null,decoder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return avro;
+    }
+
+    private byte[] getBytesFromEntryToAvro(CanalEntry.Entry entry) {
+        return getBytesFromAvro(entryToAvro(entry));
     }
 
     //persistence write pos data
