@@ -26,9 +26,11 @@ public class MagpieConfigJson {
     private void getFile() {
         //get the urlStr
         try {
-            HashMap ml = Yaml.loadType(new FileInputStream(new File(loadFile)), HashMap.class);
+            HashMap ml = Yaml.loadType(this.getClass().getClassLoader().getResource(loadFile).openStream(), HashMap.class);
             urlStr = ml.get("magpie.address") + jobId;
         } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
