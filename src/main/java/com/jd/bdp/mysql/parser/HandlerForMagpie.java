@@ -39,6 +39,9 @@ public class HandlerForMagpie implements MagpieExecutor {
     //hbase operator
     private HBaseOperator hBaseOP;
 
+    //final queue max size
+    private final int MAXQUEUE = 15000;
+
     //multiple thread queue
     private BlockingQueue<byte[]> bytesQueue;
     private BlockingQueue<byte[]> rowKeyQueue;
@@ -47,11 +50,11 @@ public class HandlerForMagpie implements MagpieExecutor {
     // bigFetch() return
     // now by the py test we set the var is 1000
 
-    private int batchsize = 3000;
+    private int batchsize = 100000;
 
     // time threshold if batch size number is not reached then if the time is
     // now by the py test we set the var is 1.5 second
-    private double secondsize = 1.5;
+    private double secondsize = 1.0;
 
     //per seconds write the position
     private int secondPer = 60;
@@ -110,8 +113,8 @@ public class HandlerForMagpie implements MagpieExecutor {
         hBaseOP.getConf().set("hbase.zookeeper.quorum",configer.getHbaseZkQuorum());
         hBaseOP.getConf().set("hbase.zookeeper.property.clientPort",configer.getHbaseZkPort());
         hBaseOP.getConf().set("dfs.socket.timeout", configer.getDfsSocketTimeout());
-        bytesQueue = new LinkedBlockingQueue<byte[]>();
-        rowKeyQueue = new LinkedBlockingQueue<byte[]>();
+        bytesQueue = new LinkedBlockingQueue<byte[]>(MAXQUEUE);
+        rowKeyQueue = new LinkedBlockingQueue<byte[]>(MAXQUEUE);
 
         //initialize variables
         running = true;
@@ -184,14 +187,16 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private boolean fetchable = true;
 
-        private int turnCount = 999;//per turn 100 data
+        private int turnCount = 10000;//per turn 10000 data
+
+        private int maxOneRow = 5000;//set batch
 
         public void run() {
             while(fetchable){
                 if(isFetchable()) {
                     ResultScanner results = null;
                     Scan scan = new Scan();
-                    scan.setBatch(1500);
+                    scan.setBatch(maxOneRow);
                     scan.setStartRow(globalReadPos);
                     scan.setStopRow(Bytes.toBytes(Bytes.toLong(globalReadPos) + turnCount));
                     try {
@@ -318,14 +323,6 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void run() throws Exception {
-        //logger.info("persistence batched data into HBase 'mysql_entry'...");
-//        //while + sleep
-//        try {
-//            Thread.sleep(2000);
-//        } catch (InterruptedException e) {
-//            logger.error("sleep error!!!");
-//            e.printStackTrace();
-//        }
         while(!bytesQueue.isEmpty()) {
             try {
                 byte[] receiveBytes = bytesQueue.take();
@@ -370,10 +367,14 @@ public class HandlerForMagpie implements MagpieExecutor {
     private void persistenceEntry() throws IOException{
         List<Put> puts = new ArrayList<Put>();
         int i = 0;
+        CanalEntry.Entry lastEntry = null;
+        String colValue = "";
         for(byte[] bytes : bytesList) {
             CanalEntry.Entry entry = CanalEntry.Entry.parseFrom(bytes);
+            lastEntry = entry;
+            if(entry != null && entry.getEntryType() == CanalEntry.EntryType.ROWDATA) colValue = getEntryCol(entry);
             //log monitor
-            logInfoEntry(entry);
+            //logInfoEntry(entry);
 //            String entryString = entryToString(entry);
 //            Put put = new Put(globalWritePos);
 //            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), Bytes.toBytes(entryString));
@@ -395,6 +396,11 @@ public class HandlerForMagpie implements MagpieExecutor {
                 }
             }
             i++;
+        }
+        if(lastEntry != null) {
+            if(bytesList.size() > 0) logger.info("===============================> persistence the " + bytesList.size() + " entries "
+                    + " the batched last column is " + colValue);
+            logInfoEntry(lastEntry);
         }
         if(puts.size() > 0) hBaseOP.putHBaseData(puts, hBaseOP.getEntryDataSchemaName());
     }
@@ -567,12 +573,30 @@ public class HandlerForMagpie implements MagpieExecutor {
                                 ",-----> table name : " +
                                 lastEntry.getHeader().getTableName() +
                                 ",-----> column info : " +
-                                colValue
+                                colValue +
+                                ",-----> type : " +
+                                getEntryType(lastEntry)
                 );
             } catch (InvalidProtocolBufferException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    private String getEntryCol(CanalEntry.Entry entry) {
+        String colValue = "";
+        try {
+            CanalEntry.RowChange rowChange = CanalEntry.RowChange.parseFrom(entry.getStoreValue());
+            if (rowChange.getRowDatasList().size() > 0) {
+                CanalEntry.RowData rowData = rowChange.getRowDatas(0);
+                if (rowData.getAfterColumnsList().size() > 0) {
+                    colValue = rowData.getAfterColumns(0).getName() + " ## " + rowData.getAfterColumns(0).getValue();
+                }
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return colValue;
     }
 
 }
