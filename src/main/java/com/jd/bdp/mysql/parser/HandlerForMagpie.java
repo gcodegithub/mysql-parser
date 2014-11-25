@@ -13,10 +13,7 @@ import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import parser.CanalEntry;
-import parser.EntryPrinter;
-import parser.HBaseOperator;
-import parser.ParserConfig;
+import parser.*;
 
 import java.io.*;
 import java.text.DateFormat;
@@ -43,8 +40,7 @@ public class HandlerForMagpie implements MagpieExecutor {
     private final int MAXQUEUE = 15000;
 
     //multiple thread queue
-    private BlockingQueue<byte[]> bytesQueue;
-    private BlockingQueue<byte[]> rowKeyQueue;
+    private BlockingQueue<HData> rowQueue;
 
     // batch size threshold for per fetch the number of the event,if event size >= batchsize then
     // bigFetch() return
@@ -66,8 +62,7 @@ public class HandlerForMagpie implements MagpieExecutor {
     //control variables
     private boolean running;
     private long startTime;
-    private List<byte[]> bytesList;
-    private List<byte[]> rowKeyList;
+    private List<HData> rowList;
 
     //constructor
     public HandlerForMagpie(ParserConfig cnf) {
@@ -113,8 +108,7 @@ public class HandlerForMagpie implements MagpieExecutor {
         hBaseOP.getConf().set("hbase.zookeeper.quorum",configer.getHbaseZkQuorum());
         hBaseOP.getConf().set("hbase.zookeeper.property.clientPort",configer.getHbaseZkPort());
         hBaseOP.getConf().set("dfs.socket.timeout", configer.getDfsSocketTimeout());
-        bytesQueue = new LinkedBlockingQueue<byte[]>(MAXQUEUE);
-        rowKeyQueue = new LinkedBlockingQueue<byte[]>(MAXQUEUE);
+        rowQueue = new LinkedBlockingQueue<HData>(MAXQUEUE);
 
         //initialize variables
         running = true;
@@ -134,8 +128,7 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         //persistence variable initialize
         startTime = new Date().getTime();
-        bytesList = new ArrayList<byte[]>();
-        rowKeyList = new ArrayList<byte[]>();
+        rowList = new ArrayList<HData>();
 
         //log info
         logger.info("start the mysql-parser successfully...");
@@ -187,7 +180,7 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private boolean fetchable = true;
 
-        private int turnCount = 10000;//per turn 10000 data
+        private int turnCount = batchsize;//per turn 100000 data
 
         private int maxOneRow = 5000;//set batch
 
@@ -206,30 +199,29 @@ public class HandlerForMagpie implements MagpieExecutor {
                         e.printStackTrace();
                     }
                     if (results != null) {
+                        int resultsSize = 0;
                         for (Result result : results) {
+                            //this rowdata and next rowkey save into hData
+                            globalReadPos = Bytes.toBytes(Bytes.toLong(globalReadPos) + 1L);
                             if (result == null) {//the null is this is the end of batched data
                                 break;
                             }
+                            resultsSize++;
                             byte[] receiveBytes = result.getValue(hBaseOP.getFamily(),
                                     Bytes.toBytes(hBaseOP.eventBytesCol));
+                            byte[] receiveRowKey = globalReadPos;
+                            HData hData = new HData(receiveRowKey,receiveBytes);
                             if (receiveBytes != null) {
                                 try {
-                                    bytesQueue.put(receiveBytes);
+                                    rowQueue.put(hData);
                                 } catch (InterruptedException e) {
-                                    logger.error("queue put failed!!!");
-                                    e.printStackTrace();
-                                }
-                                globalReadPos = Bytes.toBytes(Bytes.toLong(globalReadPos) + 1L);
-                                try {
-                                    rowKeyQueue.put(globalReadPos);//the read pos the next pos to read
-                                } catch (InterruptedException e) {
-                                    logger.error("queue put failed!!!");
                                     e.printStackTrace();
                                 }
                             } else { //the null is this is the end of batched data
                                 break;
                             }
                         }
+                        logger.info("++++++++++++++ get the result size is " + resultsSize);
                         //it's a big bug!!!
                         //if we fetched data and persistence the position bug we failed to persistence the data
                         //to hbase entry table then we will lost these data
@@ -323,14 +315,12 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void run() throws Exception {
-        while(!bytesQueue.isEmpty()) {
+        while(!rowQueue.isEmpty()) {
             try {
-                byte[] receiveBytes = bytesQueue.take();
-                bytesList.add(receiveBytes);
-                byte[] receiveRowKey = rowKeyQueue.take();
-                rowKeyList.add(receiveRowKey);
+                HData hData = rowQueue.take();
+                rowList.add(hData);
                 //per turn do not load much data
-                if(bytesList.size() >= batchsize) break;
+                if(rowList.size() >= batchsize) break;
             } catch (InterruptedException e) {
                 logger.error("take data from queue failed!!!");
                 e.printStackTrace();
@@ -338,9 +328,9 @@ public class HandlerForMagpie implements MagpieExecutor {
         }
         //persistence the batched size entry string  to entry table in HBase and
         // write pos to checkpoint
-        if(bytesList.size() >= batchsize ||
+        if(rowList.size() >= batchsize ||
                 new Date().getTime() - startTime > secondsize * 1000) {
-            if(bytesList.size() > 0) {
+            if(rowList.size() > 0) {
                 try {
                     //persistence entry data
                     persistenceEntry();
@@ -356,8 +346,7 @@ public class HandlerForMagpie implements MagpieExecutor {
                     e.printStackTrace();
                 }
                 //clear list
-                bytesList.clear();
-                rowKeyList.clear();
+                rowList.clear();
                 startTime = new Date().getTime();
             }
         }
@@ -369,8 +358,8 @@ public class HandlerForMagpie implements MagpieExecutor {
         int i = 0;
         CanalEntry.Entry lastEntry = null;
         String colValue = "";
-        for(byte[] bytes : bytesList) {
-            CanalEntry.Entry entry = CanalEntry.Entry.parseFrom(bytes);
+        for(HData hData : rowList) {
+            CanalEntry.Entry entry = CanalEntry.Entry.parseFrom(hData.rowData);
             lastEntry = entry;
             if(entry != null && entry.getEntryType() == CanalEntry.EntryType.ROWDATA) colValue = getEntryCol(entry);
             //log monitor
@@ -382,27 +371,16 @@ public class HandlerForMagpie implements MagpieExecutor {
             put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), getBytesFromEntryToAvro(entry));
             puts.add(put);
             globalWritePos = Bytes.toBytes(Bytes.toLong(globalWritePos) + 1L);
-            //persistence read pos
-            if(i < rowKeyList.size()) {
-                Put putKey = new Put(Bytes.toBytes(hBaseOP.parserRowKey));
-                Long readPosLong = Bytes.toLong(rowKeyList.get(i));
-                String readPosString = String.valueOf(readPosLong);
-                putKey.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.eventRowCol), Bytes.toBytes(readPosString));
-                try {
-                    hBaseOP.putHBaseData(putKey, hBaseOP.getCheckpointSchemaName());
-                } catch (IOException e) {
-                    logger.error("write global read pos failed!!!");
-                    e.printStackTrace();
-                }
-            }
-            i++;
         }
         if(lastEntry != null) {
-            if(bytesList.size() > 0) logger.info("===============================> persistence the " + bytesList.size() + " entries "
+            if(rowList.size() > 0) logger.info("===============================> persistence the " + rowList.size() + " entries "
                     + " the batched last column is " + colValue);
             logInfoEntry(lastEntry);
         }
-        if(puts.size() > 0) hBaseOP.putHBaseData(puts, hBaseOP.getEntryDataSchemaName());
+        //persistence a batch row data set
+        if(puts.size() > 0) {
+            hBaseOP.putHBaseData(puts, hBaseOP.getEntryDataSchemaName());
+        }
     }
 
     //Entry to String
@@ -539,7 +517,14 @@ public class HandlerForMagpie implements MagpieExecutor {
 
     //persistence write pos data
     private void persistencePos() throws IOException {
-        if(bytesList.size() > 0) {
+        if(rowList.size() > 0) {
+            //persistence the parser read pos
+            Put readPut = new Put(Bytes.toBytes(hBaseOP.parserRowKey));
+            Long readPosLong = Bytes.toLong(rowList.get(rowList.size()-1).rowKey);
+            String readPosString = String.valueOf(readPosLong);
+            readPut.add(hBaseOP.getFamily(),Bytes.toBytes(hBaseOP.eventRowCol),Bytes.toBytes(readPosString));
+            hBaseOP.putHBaseData(readPut,hBaseOP.getCheckpointSchemaName());
+            //persistence the parser write pos
             Put put = new Put(Bytes.toBytes(hBaseOP.parserRowKey));
             Long writePosLong = Bytes.toLong(globalWritePos);
             String writePosString = String.valueOf(writePosLong);
