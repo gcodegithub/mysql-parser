@@ -182,7 +182,7 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private boolean fetchable = true;
 
-        private int turnCount = 8000;//per turn 100000 data
+        private int turnCount = 10000;//per turn 100000 data
 
         private int maxOneRow = 5000;//set batch
 
@@ -199,9 +199,12 @@ public class HandlerForMagpie implements MagpieExecutor {
                 if(isFetchable()) {
                     ResultScanner results = null;
                     Scan scan = new Scan();
-                    scan.setBatch(maxOneRow);
                     scan.setStartRow(globalReadPos);
                     scan.setStopRow(Bytes.toBytes(Bytes.toLong(globalReadPos) + turnCount));
+                    scan.addColumn(hBaseOP.getFamily(),
+                            Bytes.toBytes(hBaseOP.eventBytesCol));
+                    scan.setCaching(5000);
+                    scan.setCacheBlocks(true);
                     try {
                         results = hBaseOP.getHBaseData(scan, hBaseOP.getEventBytesSchemaName());
                     } catch (IOException e) {
@@ -324,6 +327,7 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void run() throws Exception {
+        delay(1);
         while(!rowQueue.isEmpty()) {
             try {
                 HData hData = rowQueue.take();
@@ -591,6 +595,14 @@ public class HandlerForMagpie implements MagpieExecutor {
             e.printStackTrace();
         }
         return colValue;
+    }
+
+    private void delay(int sec) {
+        try {
+            Thread.sleep(sec * 1000);
+        } catch (InterruptedException e) {
+            logger.error(e.getMessage());
+        }
     }
 
 }
