@@ -108,6 +108,7 @@ public class HandlerForMagpie implements MagpieExecutor {
         hBaseOP.getConf().set("hbase.zookeeper.quorum",configer.getHbaseZkQuorum());
         hBaseOP.getConf().set("hbase.zookeeper.property.clientPort",configer.getHbaseZkPort());
         hBaseOP.getConf().set("dfs.socket.timeout", configer.getDfsSocketTimeout());
+        hBaseOP.connect();
         rowQueue = new LinkedBlockingQueue<HData>(MAXQUEUE);
 
         //initialize variables
@@ -116,6 +117,7 @@ public class HandlerForMagpie implements MagpieExecutor {
         globalWritePos = null;
         globalReadPos =null;
         findStartPos();
+        logger.info("global read pos is " + Bytes.toLong(globalReadPos));
 
         //run parser thread
         //build and start the fetch thread
@@ -180,23 +182,18 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private boolean fetchable = true;
 
-        private int turnCount = 10000;//per turn 100000 data
+        private int turnCount = 8000;//per turn 100000 data
 
         private int maxOneRow = 5000;//set batch
 
-        private HTable hIsFetch = null;
+        private HTable hIsFetch;
 
         public void run() {
-            HTable hTable = null;
             try {
-                hTable = new HTable(hBaseOP.getConf(), hBaseOP.getEventBytesSchemaName());
                 hIsFetch = new HTable(hBaseOP.getConf(), hBaseOP.getEventBytesSchemaName());
             } catch (IOException e) {
+                logger.error(e.getMessage());
                 e.printStackTrace();
-            }
-            if(hTable == null) {
-                logger.info("create hbase table failed ......");
-                return;
             }
             while(fetchable){
                 if(isFetchable()) {
@@ -206,7 +203,7 @@ public class HandlerForMagpie implements MagpieExecutor {
                     scan.setStartRow(globalReadPos);
                     scan.setStopRow(Bytes.toBytes(Bytes.toLong(globalReadPos) + turnCount));
                     try {
-                        results = hTable.getScanner(scan);
+                        results = hBaseOP.getHBaseData(scan, hBaseOP.getEventBytesSchemaName());
                     } catch (IOException e) {
                         logger.error("fetch data failed!!!");
                         e.printStackTrace();
@@ -255,9 +252,9 @@ public class HandlerForMagpie implements MagpieExecutor {
             }
             running = false;//close all running process
             try {
-                hTable.close();
                 hIsFetch.close();
             } catch (IOException e) {
+                logger.error(e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -322,12 +319,7 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void close(String id) throws Exception {
-
-//        whaleMonitorProducer.close();
-//        whaleMonitorConsumer.close();
-
-        //kafkaMonitorProducer.close();
-
+        hBaseOP.disconnect();
     }
 
 

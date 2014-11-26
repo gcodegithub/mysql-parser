@@ -20,6 +20,14 @@ public class HBaseOperator {
     //hadoop config
     private Configuration conf;
 
+    //kinds of htale
+    private HTable hEventWriter;
+    private HTable hEventReader;
+    private HTable hEntryWriter;
+    private HTable hEntryReader;
+    private HTable hCheckpointWriter;
+    private HTable hCheckpointReader;
+
     //entry table name
     private String eventBytesSchemaName = "mysql_event";
 
@@ -51,6 +59,8 @@ public class HBaseOperator {
         conf.set("hbase.zookeeper.quorum","localhost");
         conf.set("hbase.zookeeper.property.clientPort","2181");
         conf.set("dfs.socket.timeout", "180000");
+
+
     }
 
     public HBaseOperator(String myId) {
@@ -66,6 +76,46 @@ public class HBaseOperator {
         mysqlId = myId;
         trackerRowKey = trackerRowKey + "###" + mysqlId;
         parserRowKey = parserRowKey + "###" + mysqlId;
+    }
+
+    public void connect() {
+        try {
+            hEventReader = new HTable(conf, eventBytesSchemaName);
+            hEventWriter = new HTable(conf, eventBytesSchemaName);
+            hEntryWriter = new HTable(conf, entryDataSchemaName);
+            hEntryReader = new HTable(conf, entryDataSchemaName);
+            hCheckpointWriter = new HTable(conf, checkpointSchemaName);
+            hCheckpointReader = new HTable(conf, checkpointSchemaName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void disconnect() {
+        try {
+            hEventReader.close();
+            hEventWriter.close();
+            hEntryReader.close();
+            hEntryWriter.close();
+            hCheckpointReader.close();
+            hCheckpointWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private HTable getHTableWriterBySchema(String schema) {
+        if(schema.equals(eventBytesSchemaName)) return hEventWriter;
+        if(schema.equals(entryDataSchemaName)) return hEntryWriter;
+        if(schema.equals(checkpointSchemaName)) return hCheckpointWriter;
+        return null;
+    }
+
+    private HTable getHTableReaderBySchema(String schema) {
+        if(schema.equals(eventBytesSchemaName)) return hEventReader;
+        if(schema.equals(entryDataSchemaName)) return hEntryReader;
+        if(schema.equals(checkpointSchemaName)) return hCheckpointReader;
+        return null;
     }
 
     public Configuration getConf() {
@@ -99,10 +149,9 @@ public class HBaseOperator {
     }
 
     //variable get data
-    public Result getHBaseData(Get get, String schemaName) throws IOException{
-        HTable hTable = new HTable(conf, schemaName);
+    public Result getHBaseData(Get get, String schemaName) throws IOException {
+        HTable hTable = getHTableReaderBySchema(schemaName);
         Result result = hTable.get(get);
-        hTable.close();
         return(result);
     }
 
@@ -119,9 +168,8 @@ public class HBaseOperator {
 
     //variable scan data
     public ResultScanner getHBaseData(Scan scan, String schemaName) throws IOException {
-        HTable hTable = new HTable(conf, schemaName);
+        HTable hTable = getHTableReaderBySchema(schemaName);
         ResultScanner results = hTable.getScanner(scan);
-        //no hTable.close() for ResultScanner
         return(results);
     }
 
@@ -183,15 +231,13 @@ public class HBaseOperator {
     }
 
     public void putHBaseData(List<Put> puts, String schemaName) throws IOException{
-        HTable hTable = new HTable(conf, schemaName);
+        HTable hTable = getHTableWriterBySchema(schemaName);
         hTable.put(puts);
-        hTable.close();
     }
 
     public void putHBaseData(Put put, String schemaName) throws  IOException{
-        HTable hTable = new HTable(conf, schemaName);
+        HTable hTable = getHTableWriterBySchema(schemaName);
         hTable.put(put);
-        hTable.close();
     }
 
     public byte[] getFamily(String schemaName){
