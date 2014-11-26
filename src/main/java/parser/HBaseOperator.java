@@ -106,6 +106,17 @@ public class HBaseOperator {
         return(result);
     }
 
+    public boolean existHBaseData(Get get, String schemaName) throws IOException {
+        HTable hTable = new HTable(conf, schemaName);
+        return hTable.exists(get);
+    }
+
+    public Result[] getHBaseData(List<Get> gets, String schemaName) throws IOException {
+        HTable hTable = new HTable(conf, schemaName);
+        Result[] results = hTable.get(gets);
+        return results;
+    }
+
     //variable scan data
     public ResultScanner getHBaseData(Scan scan, String schemaName) throws IOException {
         HTable hTable = new HTable(conf, schemaName);

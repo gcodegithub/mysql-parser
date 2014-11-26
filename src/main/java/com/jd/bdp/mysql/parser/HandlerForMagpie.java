@@ -180,11 +180,24 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private boolean fetchable = true;
 
-        private int turnCount = batchsize;//per turn 100000 data
+        private int turnCount = 10000;//per turn 100000 data
 
         private int maxOneRow = 5000;//set batch
 
+        private HTable hIsFetch = null;
+
         public void run() {
+            HTable hTable = null;
+            try {
+                hTable = new HTable(hBaseOP.getConf(), hBaseOP.getEventBytesSchemaName());
+                hIsFetch = new HTable(hBaseOP.getConf(), hBaseOP.getEventBytesSchemaName());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if(hTable == null) {
+                logger.info("create hbase table failed ......");
+                return;
+            }
             while(fetchable){
                 if(isFetchable()) {
                     ResultScanner results = null;
@@ -193,7 +206,7 @@ public class HandlerForMagpie implements MagpieExecutor {
                     scan.setStartRow(globalReadPos);
                     scan.setStopRow(Bytes.toBytes(Bytes.toLong(globalReadPos) + turnCount));
                     try {
-                        results = hBaseOP.getHBaseData(scan, hBaseOP.getEventBytesSchemaName());
+                        results = hTable.getScanner(scan);
                     } catch (IOException e) {
                         logger.error("fetch data failed!!!");
                         e.printStackTrace();
@@ -237,9 +250,16 @@ public class HandlerForMagpie implements MagpieExecutor {
                             e.printStackTrace();
                         }*/
                     }
+                    if(results != null) results.close();
                 }
             }
             running = false;//close all running process
+            try {
+                hTable.close();
+                hIsFetch.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         //monitor the hbase globalReadPos whether have inserted data
@@ -247,17 +267,14 @@ public class HandlerForMagpie implements MagpieExecutor {
             //monitor the hbase globalReadPos whether have the data inserted
             Get get = new Get(globalReadPos);
             get.addColumn(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.eventBytesCol));
-            Result result = null;
+            boolean result = false;
             try {
-                result = hBaseOP.getHBaseData(get, hBaseOP.getEventBytesSchemaName());
+                result  = hIsFetch.exists(get);
             } catch (IOException e){
                 logger.error("fetch single data failed!!!");
                 e.printStackTrace();
             }
-            if(result == null) return false;
-            byte[] receiveBytes = result.getValue(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.eventBytesCol));
-            if(receiveBytes != null) return true;
-            else return false;
+            return result;
         }
     }
 
