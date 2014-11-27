@@ -37,7 +37,7 @@ public class HandlerForMagpie implements MagpieExecutor {
     private HBaseOperator hBaseOP;
 
     //final queue max size
-    private final int MAXQUEUE = 15000;
+    private final int MAXQUEUE = 30000;
 
     //multiple thread queue
     private BlockingQueue<HData> rowQueue;
@@ -63,6 +63,9 @@ public class HandlerForMagpie implements MagpieExecutor {
     private boolean running;
     private long startTime;
     private List<HData> rowList;
+
+    //monitor
+    private ParserMonitor monitor;
 
     //constructor
     public HandlerForMagpie(ParserConfig cnf) {
@@ -132,6 +135,9 @@ public class HandlerForMagpie implements MagpieExecutor {
         startTime = new Date().getTime();
         rowList = new ArrayList<HData>();
 
+        //monitor
+        monitor = new ParserMonitor();
+
         //log info
         logger.info("start the mysql-parser successfully...");
     }
@@ -188,6 +194,8 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         private HTable hIsFetch;
 
+        private ParserMonitor monitor = new ParserMonitor();
+
         public void run() {
             try {
                 hIsFetch = new HTable(hBaseOP.getConf(), hBaseOP.getEventBytesSchemaName());
@@ -197,13 +205,14 @@ public class HandlerForMagpie implements MagpieExecutor {
             }
             while(fetchable){
                 if(isFetchable()) {
+                    monitor.fetchStart = System.currentTimeMillis();
                     ResultScanner results = null;
                     Scan scan = new Scan();
                     scan.setStartRow(globalReadPos);
                     scan.setStopRow(Bytes.toBytes(Bytes.toLong(globalReadPos) + turnCount));
                     scan.addColumn(hBaseOP.getFamily(),
                             Bytes.toBytes(hBaseOP.eventBytesCol));
-                    scan.setCaching(5000);
+                    scan.setCaching(turnCount);
                     scan.setCacheBlocks(true);
                     try {
                         results = hBaseOP.getHBaseData(scan, hBaseOP.getEventBytesSchemaName());
@@ -222,6 +231,7 @@ public class HandlerForMagpie implements MagpieExecutor {
                             resultsSize++;
                             byte[] receiveBytes = result.getValue(hBaseOP.getFamily(),
                                     Bytes.toBytes(hBaseOP.eventBytesCol));
+                            monitor.batchSize += receiveBytes.length;
                             byte[] receiveRowKey = globalReadPos;
                             HData hData = new HData(receiveRowKey,receiveBytes);
                             if (receiveBytes != null) {
@@ -234,7 +244,7 @@ public class HandlerForMagpie implements MagpieExecutor {
                                 break;
                             }
                         }
-                        logger.info("++++++++++++++ get the result size is " + resultsSize);
+                        monitor.fetchNum += resultsSize;
                         //it's a big bug!!!
                         //if we fetched data and persistence the position bug we failed to persistence the data
                         //to hbase entry table then we will lost these data
@@ -251,6 +261,12 @@ public class HandlerForMagpie implements MagpieExecutor {
                         }*/
                     }
                     if(results != null) results.close();
+                    monitor.fetchEnd = System.currentTimeMillis();
+                    logger.info("======> fetch thread : ");
+                    logger.info("---> fetch thread during sum time : " + (monitor.fetchEnd - monitor.fetchStart));
+                    logger.info("---> fetch the events (bytes) num : " + monitor.fetchNum);
+                    logger.info("---> fetch the events size : " + monitor.batchSize);
+                    monitor.clear();
                 }
             }
             running = false;//close all running process
@@ -304,11 +320,10 @@ public class HandlerForMagpie implements MagpieExecutor {
                     logger.error("minute persistence read pos and write pos failed!!!");
                     e.printStackTrace();
                 }
-                logger.info("per minute persistence the position into HBase..." +
-                            "row key is :" + rowKey + "," +
-                            "col is :" + readPosString + "," +
-                            "col is :" + writePosString
-                );
+                logger.info("======> per minute persistence the position into HBase...");
+                logger.info("---> row key is :" + rowKey + "," +
+                        "col is :" + readPosString + "," +
+                        "col is :" + writePosString);
             }
         }
     }
@@ -344,6 +359,7 @@ public class HandlerForMagpie implements MagpieExecutor {
         if(rowList.size() >= batchsize ||
                 new Date().getTime() - startTime > secondsize * 1000) {
             if(rowList.size() > 0) {
+                monitor.persisNum = rowList.size();
                 try {
                     //persistence entry data
                     persistenceEntry();
@@ -363,6 +379,13 @@ public class HandlerForMagpie implements MagpieExecutor {
                 startTime = new Date().getTime();
             }
         }
+        if(monitor.persisNum > 0) {
+            logger.info("---> persistence deal during time : " + (monitor.persistenceEnd - monitor.persistenceStart));
+            logger.info("---> write hbase during time : " + (monitor.hbaseWriteEnd - monitor.hbaseWriteStart));
+            logger.info("---> entry list to bytes (avro) sum size is " + monitor.batchSize);
+            logger.info("---> the number if entry list is " + monitor.persisNum);
+            monitor.clear();
+        }
     }
 
     //persistence entry data
@@ -371,6 +394,7 @@ public class HandlerForMagpie implements MagpieExecutor {
         int i = 0;
         CanalEntry.Entry lastEntry = null;
         String colValue = "";
+        monitor.persistenceStart = System.currentTimeMillis();
         for(HData hData : rowList) {
             CanalEntry.Entry entry = CanalEntry.Entry.parseFrom(hData.rowData);
             lastEntry = entry;
@@ -381,18 +405,23 @@ public class HandlerForMagpie implements MagpieExecutor {
 //            Put put = new Put(globalWritePos);
 //            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), Bytes.toBytes(entryString));
             Put put = new Put(globalWritePos);
-            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), getBytesFromEntryToAvro(entry));
+            byte[] avroBytes = getBytesFromEntryToAvro(entry);
+            monitor.batchSize += avroBytes.length;
+            put.add(hBaseOP.getFamily(), Bytes.toBytes(hBaseOP.entryRowCol), avroBytes);
             puts.add(put);
             globalWritePos = Bytes.toBytes(Bytes.toLong(globalWritePos) + 1L);
         }
+        monitor.persistenceEnd = System.currentTimeMillis();
         if(lastEntry != null) {
-            if(rowList.size() > 0) logger.info("===============================> persistence the " + rowList.size() + " entries "
+            if(rowList.size() > 0) logger.info("======> persistence the " + rowList.size() + " entries "
                     + " the batched last column is " + colValue);
             logInfoEntry(lastEntry);
         }
         //persistence a batch row data set
         if(puts.size() > 0) {
+            monitor.hbaseWriteStart = System.currentTimeMillis();
             hBaseOP.putHBaseData(puts, hBaseOP.getEntryDataSchemaName());
+            monitor.hbaseWriteEnd = System.currentTimeMillis();
         }
     }
 
@@ -558,21 +587,21 @@ public class HandlerForMagpie implements MagpieExecutor {
                         colValue = rowData.getAfterColumns(0).getName() + " ## " + rowData.getAfterColumns(0).getValue();
                     }
                 }
-                logger.info("--------------------------->get entry : " +
+                logger.info("--->get entry : " +
                                 lastEntry.getEntryType() +
-                                ",-----> now pos : " +
+                                ", now pos : " +
                                 lastEntry.getHeader().getLogfileOffset() +
-                                ",-----> next pos : " +
+                                ", next pos : " +
                                 (lastEntry.getHeader().getLogfileOffset() + lastEntry.getHeader().getEventLength()) +
-                                ",-----> binlog file : " +
+                                ", binlog file : " +
                                 lastEntry.getHeader().getLogfileName() +
-                                ",-----> schema name : " +
+                                ", schema name : " +
                                 lastEntry.getHeader().getSchemaName() +
-                                ",-----> table name : " +
+                                ", table name : " +
                                 lastEntry.getHeader().getTableName() +
-                                ",-----> column info : " +
+                                ", column info : " +
                                 colValue +
-                                ",-----> type : " +
+                                ", type : " +
                                 getEntryType(lastEntry)
                 );
             } catch (InvalidProtocolBufferException e) {

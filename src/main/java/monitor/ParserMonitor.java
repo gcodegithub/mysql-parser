@@ -1,44 +1,62 @@
 package monitor;
 
-import java.util.Date;
-
 /**
  * Created by hp on 14-9-23.
  */
 public class ParserMonitor {
 
-    public Date startTimeDate;
+    public long fetchStart;
 
-    public Date endTimeDate;
+    public long fetchEnd;
 
-    public int inEventNum;
+    public long persistenceStart;
 
-    public int outEventNum;
+    public long persistenceEnd;
 
-    public int inSizeEvents;
+    public long perMinStart;
 
-    public int inSizeBytes;
+    public long perMinEnd;
 
-    public int outSizeEvents;
+    public long hbaseReadStart;
 
-    public long startDealTime;
+    public long hbaseReadEnd;
 
-    public long endDealTime;
+    public long hbaseWriteStart;
 
-    public long duringDealTime;
+    public long hbaseWriteEnd;
+
+    public long serializeStart;
+
+    public long serializeEnd;
+
+    public long fetchNum;
+
+    public long persisNum;
+
+    public long batchSize;//bytes for unit
+
+    public long fetcherStart;
+
+    public long fetcherEnd;
+
+    public long decodeStart;
+
+    public long decodeEnd;
 
     public ParserMonitor() {
-        startTimeDate = null;
-        endTimeDate = null;
-        inEventNum = outEventNum = inSizeEvents = outSizeEvents = inSizeBytes =  0;
-        duringDealTime = startDealTime = endDealTime = 0L;
+        fetchStart = fetchEnd = persistenceStart = persistenceEnd = 0;
+        perMinStart = perMinEnd = hbaseReadStart = hbaseReadEnd = 0;
+        hbaseWriteStart = hbaseWriteEnd = serializeStart = serializeEnd = 0;
+        fetchNum = persisNum = batchSize = 0;
+        fetcherStart = fetcherEnd = decodeStart = decodeEnd = 0;
     }
 
     public void clear() {
-        startTimeDate = null;
-        endTimeDate = null;
-        inEventNum = outEventNum = inSizeEvents = outSizeEvents =  0;
-        duringDealTime = startDealTime = endDealTime = 0L;
+        fetchStart = fetchEnd = persistenceStart = persistenceEnd = 0;
+        perMinStart = perMinEnd = hbaseReadStart = hbaseReadEnd = 0;
+        hbaseWriteStart = hbaseWriteEnd = serializeStart = serializeEnd = 0;
+        fetchNum = persisNum = batchSize = 0;
+        fetcherStart = fetcherEnd = decodeStart = decodeEnd = 0;
     }
 
 }
