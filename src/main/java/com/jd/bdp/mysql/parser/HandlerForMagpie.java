@@ -67,6 +67,11 @@ public class HandlerForMagpie implements MagpieExecutor {
     //monitor
     private ParserMonitor monitor;
 
+    //thread
+    FetchThread fetchThread;
+    MinuteTimer minuteThread;
+    Timer timer;
+
     //constructor
     public HandlerForMagpie(ParserConfig cnf) {
 
@@ -124,11 +129,11 @@ public class HandlerForMagpie implements MagpieExecutor {
 
         //run parser thread
         //build and start the fetch thread
-        FetchThread fetchThread = new FetchThread();
+        fetchThread = new FetchThread();
         fetchThread.start();
         //build and start the minute thread
-        MinuteTimer minuteThread = new MinuteTimer();
-        Timer timer = new Timer();
+        minuteThread = new MinuteTimer();
+        timer = new Timer();
         timer.schedule(minuteThread, 3 * 1000, secondPer * 1000);
 
         //persistence variable initialize
@@ -195,6 +200,10 @@ public class HandlerForMagpie implements MagpieExecutor {
         private HTable hIsFetch;
 
         private ParserMonitor monitor = new ParserMonitor();
+
+        public void setFetchable(boolean is) {
+            fetchable = is;
+        }
 
         public void run() {
             try {
@@ -337,6 +346,9 @@ public class HandlerForMagpie implements MagpieExecutor {
 
 
     public void close(String id) throws Exception {
+        fetchThread.setFetchable(false);//stop the fetch thread
+        minuteThread.cancel();
+        timer.cancel();
         hBaseOP.disconnect();
     }
 

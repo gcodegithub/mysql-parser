@@ -240,6 +240,11 @@ public class HBaseOperator {
         hTable.put(put);
     }
 
+    public void deleteHBaseData(Delete del, String schemaName) throws IOException {
+        HTable hTable = getHTableWriterBySchema(schemaName);
+        hTable.delete(del);
+    }
+
     public byte[] getFamily(String schemaName){
         return(Bytes.toBytes("d"));
     }
