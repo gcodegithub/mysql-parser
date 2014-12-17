@@ -1,4 +1,4 @@
-package com.jd.bdp.mysql.parser;
+package protocol.json;
 
 import net.sf.json.JSONObject;
 import net.sf.json.util.JSONTokener;

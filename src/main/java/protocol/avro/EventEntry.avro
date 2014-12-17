@@ -1,5 +1,5 @@
 {
-    "namespace": "com.jd.bdp.mysql.parser.avro",
+    "namespace": "protocol.avro",
     "type": "record",
     "name": "EventEntryAvro",
     "fields": [

@@ -6,7 +6,7 @@
 
     <groupId>mysql-parser</groupId>
     <artifactId>mysql-parser</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1</version>
 
     <dependencies>
         <dependency>
@@ -228,6 +228,29 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <!--avro-->
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>1.7.3</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${project.basedir}/src/main/java/protocol/avro/</sourceDirectory>
+                            <outputDirectory>${project.basedir}/src/main/java/</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
             </plugin>
 
         </plugins>

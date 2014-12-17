@@ -1,6 +1,7 @@
-package parser;
+package parser.utils;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import protocol.protobuf.CanalEntry;
 
 import java.util.Date;
 import java.util.List;

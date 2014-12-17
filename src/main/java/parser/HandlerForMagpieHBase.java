@@ -1,34 +1,59 @@
-package com.jd.bdp.mysql.parser;
+package parser;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.jd.bdp.magpie.MagpieExecutor;
-import com.jd.bdp.mysql.parser.avro.EventEntryAvro;
-import com.sun.tools.corba.se.idl.StringGen;
+import hbase.driver.HBaseOperator;
+import hbase.utils.HData;
 import monitor.ParserMonitor;
 import net.sf.json.JSONObject;
-import org.apache.avro.io.*;
+import org.apache.avro.io.BinaryEncoder;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import parser.*;
+import parser.utils.ParserConfig;
+import protocol.avro.EventEntryAvro;
+import protocol.json.MagpieConfigJson;
+import protocol.protobuf.CanalEntry;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Created by hp on 14-9-22.
  */
-public class HandlerForMagpie implements MagpieExecutor {
+public class HandlerForMagpieHBase implements MagpieExecutor {
 
     //parser's logger
-    private Logger logger = LoggerFactory.getLogger(HandlerForMagpie.class);
+    private Logger logger = LoggerFactory.getLogger(HandlerForMagpieHBase.class);
 
     //configuration
     private ParserConfig configer;
@@ -73,12 +98,12 @@ public class HandlerForMagpie implements MagpieExecutor {
     Timer timer;
 
     //constructor
-    public HandlerForMagpie(ParserConfig cnf) {
+    public HandlerForMagpieHBase(ParserConfig cnf) {
 
         this.configer = cnf;
     }
 
-    public HandlerForMagpie(File file) throws IOException{
+    public HandlerForMagpieHBase(File file) throws IOException{
         if(file.exists()) {
             InputStream in = new BufferedInputStream(new FileInputStream(file));
             Properties pro = new Properties();
@@ -437,10 +462,6 @@ public class HandlerForMagpie implements MagpieExecutor {
         }
     }
 
-    //Entry to String
-    private String entryToString(CanalEntry.Entry entry) {
-        return(EntryPrinter.printEntry(entry));
-    }
 
     private String getEntryType(CanalEntry.Entry entry) {
         try {

@@ -1,9 +1,12 @@
 package parser;
 
+import hbase.driver.HBaseOperator;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import parser.utils.EntryPrinter;
+import protocol.protobuf.CanalEntry;
 
 import java.io.IOException;
 import java.text.DateFormat;

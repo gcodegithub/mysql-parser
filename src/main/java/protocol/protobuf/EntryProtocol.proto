@@ -1,6 +1,6 @@
-package parser;
+package protocol.protobuf;
 
-option java_package = "parser";
+option java_package = "protocol.protobuf";
 option java_outer_classname = "CanalEntry";
 option optimize_for = SPEED;
 
@@ -17,6 +17,12 @@ message Entry {
 
 	/**传输的二进制数组**/
 	optional bytes						storeValue			= 3;
+
+	/**additional info**/
+    optional int64 						batchId				= 4;
+
+    /**additional info**/
+    optional int64						inId				= 5;
 }
 
 /**message Header**/

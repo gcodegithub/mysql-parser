@@ -1,4 +1,4 @@
-package parser;
+package parser.utils;
 
 /**
  * Created by hp on 14-9-28.

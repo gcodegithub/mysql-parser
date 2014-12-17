@@ -3,7 +3,7 @@
  * 
  * DO NOT EDIT DIRECTLY
  */
-package com.jd.bdp.mysql.parser.avro;  
+package protocol.avro;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
@@ -227,18 +227,18 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
   }
 
   /** Creates a new EventEntryAvro RecordBuilder */
-  public static com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder newBuilder() {
-    return new com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder();
+  public static EventEntryAvro.Builder newBuilder() {
+    return new EventEntryAvro.Builder();
   }
   
   /** Creates a new EventEntryAvro RecordBuilder by copying an existing Builder */
-  public static com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder newBuilder(com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder other) {
-    return new com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder(other);
+  public static EventEntryAvro.Builder newBuilder(EventEntryAvro.Builder other) {
+    return new EventEntryAvro.Builder(other);
   }
   
   /** Creates a new EventEntryAvro RecordBuilder by copying an existing EventEntryAvro instance */
-  public static com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder newBuilder(com.jd.bdp.mysql.parser.avro.EventEntryAvro other) {
-    return new com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder(other);
+  public static EventEntryAvro.Builder newBuilder(EventEntryAvro other) {
+    return new EventEntryAvro.Builder(other);
   }
   
   /**
@@ -260,17 +260,17 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
 
     /** Creates a new Builder */
     private Builder() {
-      super(com.jd.bdp.mysql.parser.avro.EventEntryAvro.SCHEMA$);
+      super(EventEntryAvro.SCHEMA$);
     }
     
     /** Creates a Builder by copying an existing Builder */
-    private Builder(com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder other) {
+    private Builder(EventEntryAvro.Builder other) {
       super(other);
     }
     
     /** Creates a Builder by copying an existing EventEntryAvro instance */
-    private Builder(com.jd.bdp.mysql.parser.avro.EventEntryAvro other) {
-            super(com.jd.bdp.mysql.parser.avro.EventEntryAvro.SCHEMA$);
+    private Builder(EventEntryAvro other) {
+            super(EventEntryAvro.SCHEMA$);
       if (isValidValue(fields()[0], other.dbName)) {
         this.dbName = data().deepCopy(fields()[0].schema(), other.dbName);
         fieldSetFlags()[0] = true;
@@ -319,7 +319,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'dbName' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setDbName(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setDbName(java.lang.CharSequence value) {
       validate(fields()[0], value);
       this.dbName = value;
       fieldSetFlags()[0] = true;
@@ -332,7 +332,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'dbName' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearDbName() {
+    public EventEntryAvro.Builder clearDbName() {
       dbName = null;
       fieldSetFlags()[0] = false;
       return this;
@@ -344,7 +344,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'schema' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setSchema$(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setSchema$(java.lang.CharSequence value) {
       validate(fields()[1], value);
       this.schema = value;
       fieldSetFlags()[1] = true;
@@ -357,7 +357,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'schema' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearSchema$() {
+    public EventEntryAvro.Builder clearSchema$() {
       schema = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -369,7 +369,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'tableName' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setTableName(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setTableName(java.lang.CharSequence value) {
       validate(fields()[2], value);
       this.tableName = value;
       fieldSetFlags()[2] = true;
@@ -382,7 +382,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'tableName' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearTableName() {
+    public EventEntryAvro.Builder clearTableName() {
       tableName = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -394,7 +394,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'operation' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setOperation(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setOperation(java.lang.CharSequence value) {
       validate(fields()[3], value);
       this.operation = value;
       fieldSetFlags()[3] = true;
@@ -407,7 +407,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'operation' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearOperation() {
+    public EventEntryAvro.Builder clearOperation() {
       operation = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -419,7 +419,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'dbOptTimestamp' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setDbOptTimestamp(long value) {
+    public EventEntryAvro.Builder setDbOptTimestamp(long value) {
       validate(fields()[4], value);
       this.dbOptTimestamp = value;
       fieldSetFlags()[4] = true;
@@ -432,7 +432,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'dbOptTimestamp' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearDbOptTimestamp() {
+    public EventEntryAvro.Builder clearDbOptTimestamp() {
       fieldSetFlags()[4] = false;
       return this;
     }
@@ -443,7 +443,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'dmlHBaseOptTimestamp' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setDmlHBaseOptTimestamp(long value) {
+    public EventEntryAvro.Builder setDmlHBaseOptTimestamp(long value) {
       validate(fields()[5], value);
       this.dmlHBaseOptTimestamp = value;
       fieldSetFlags()[5] = true;
@@ -456,7 +456,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'dmlHBaseOptTimestamp' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearDmlHBaseOptTimestamp() {
+    public EventEntryAvro.Builder clearDmlHBaseOptTimestamp() {
       fieldSetFlags()[5] = false;
       return this;
     }
@@ -467,7 +467,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'ddlSql' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setDdlSql(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setDdlSql(java.lang.CharSequence value) {
       validate(fields()[6], value);
       this.ddlSql = value;
       fieldSetFlags()[6] = true;
@@ -480,7 +480,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'ddlSql' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearDdlSql() {
+    public EventEntryAvro.Builder clearDdlSql() {
       ddlSql = null;
       fieldSetFlags()[6] = false;
       return this;
@@ -492,7 +492,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'error' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setError(java.lang.CharSequence value) {
+    public EventEntryAvro.Builder setError(java.lang.CharSequence value) {
       validate(fields()[7], value);
       this.error = value;
       fieldSetFlags()[7] = true;
@@ -505,7 +505,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'error' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearError() {
+    public EventEntryAvro.Builder clearError() {
       error = null;
       fieldSetFlags()[7] = false;
       return this;
@@ -517,7 +517,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'source' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setSource(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
+    public EventEntryAvro.Builder setSource(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
       validate(fields()[8], value);
       this.source = value;
       fieldSetFlags()[8] = true;
@@ -530,7 +530,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'source' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearSource() {
+    public EventEntryAvro.Builder clearSource() {
       source = null;
       fieldSetFlags()[8] = false;
       return this;
@@ -542,7 +542,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Sets the value of the 'current' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder setCurrent(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
+    public EventEntryAvro.Builder setCurrent(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
       validate(fields()[9], value);
       this.current = value;
       fieldSetFlags()[9] = true;
@@ -555,7 +555,7 @@ public class EventEntryAvro extends org.apache.avro.specific.SpecificRecordBase 
     }
     
     /** Clears the value of the 'current' field */
-    public com.jd.bdp.mysql.parser.avro.EventEntryAvro.Builder clearCurrent() {
+    public EventEntryAvro.Builder clearCurrent() {
       current = null;
       fieldSetFlags()[9] = false;
       return this;

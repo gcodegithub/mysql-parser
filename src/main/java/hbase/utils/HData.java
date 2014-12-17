@@ -1,4 +1,4 @@
-package parser;
+package hbase.utils;
 
 /**
  * Created by hp on 14-11-25.

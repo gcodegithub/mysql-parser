@@ -1,7 +1,7 @@
-package com.jd.bdp.mysql.parser;
+package protocol.json;
 
 import net.sf.json.JSONObject;
-import parser.ParserConfig;
+import parser.utils.ParserConfig;
 
 /**
  * Created by hp on 14-11-14.
