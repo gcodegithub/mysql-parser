@@ -708,3 +708,7 @@
 2014-12-17 16:16:37 HandlerMagpieKafka$Minuter [INFO] ---> topic is test,partition is :0,offset is :111; batch id is :1,in batch id is :0
 2014-12-17 16:17:37 HandlerMagpieKafka$Minuter [INFO] ===================================> minute thread:
 2014-12-17 16:17:37 HandlerMagpieKafka$Minuter [INFO] ---> topic is test,partition is :0,offset is :111; batch id is :1,in batch id is :0
+2014-12-17 16:18:37 HandlerMagpieKafka$Minuter [INFO] ===================================> minute thread:
+2014-12-17 16:18:37 HandlerMagpieKafka$Minuter [INFO] ---> topic is test,partition is :0,offset is :111; batch id is :1,in batch id is :0
+2014-12-17 16:19:37 HandlerMagpieKafka$Minuter [INFO] ===================================> minute thread:
+2014-12-17 16:19:37 HandlerMagpieKafka$Minuter [INFO] ---> topic is test,partition is :0,offset is :111; batch id is :1,in batch id is :0
