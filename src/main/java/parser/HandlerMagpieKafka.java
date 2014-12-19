@@ -112,6 +112,8 @@ public class HandlerMagpieKafka implements MagpieExecutor {
 //            JSONObject jcontent = jRoot.getJSONObject("info").getJSONObject("content");
 //            config.brokerList = jcontent.getString("brokerList");
 //        }
+        //test environment
+        config.testInit();
         //kafka
         KafkaConf kcnf = new KafkaConf();
         kcnf.brokerList = config.brokerList;
@@ -126,7 +128,7 @@ public class HandlerMagpieKafka implements MagpieExecutor {
         zk.connect();
         initZk();
         //queue
-        msgQueue = new LinkedBlockingQueue<KafkaMetaMsg>(config.batchsize);
+        msgQueue = new LinkedBlockingQueue<KafkaMetaMsg>(config.queuesize);
         //batchid inId
         batchId = 0;
         inId = 0;
@@ -431,9 +433,6 @@ public class HandlerMagpieKafka implements MagpieExecutor {
         while (!msgQueue.isEmpty()) {
             KafkaMetaMsg msg = msgQueue.take();
             if(msg == null) continue;
-            globalOffset = msg.offset;
-            globalBatchId = batchId;
-            globalInBatchId = inId;
             CanalEntry.Entry entry = CanalEntry.Entry.parseFrom(msg.msg);
             if(pre != null && !isBehind(pre,entry)) continue;//clear the repeat
             pre = entry;
@@ -452,6 +451,9 @@ public class HandlerMagpieKafka implements MagpieExecutor {
                 }
                 entryList.add(newEntry);
             }
+            globalOffset = msg.offset;
+            globalBatchId = batchId;
+            globalInBatchId = inId;
             if(entryList.size() >= config.batchsize) break;
         }
         //distribute data to multiple topic kafka, per time must confirm the position
@@ -479,8 +481,9 @@ public class HandlerMagpieKafka implements MagpieExecutor {
     private void distributeData(List<CanalEntry.Entry> entries) {
         monitor.persistenceStart = System.currentTimeMillis();
         for(CanalEntry.Entry entry : entries) {
+            System.out.print("debug :");
+            logInfoEntry(entry);
             String topic =  getTopic(entry.getHeader().getSchemaName()+"."+entry.getHeader().getTableName());
-            System.out.println(entry.getEntryType() + ",topic:" + topic);
             byte[] value = getBytesFromEntryToAvro(entry);
             if(topic == null || value == null) continue;
             msgSender.send(topic, value);

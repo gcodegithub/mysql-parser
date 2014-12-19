@@ -36,6 +36,11 @@ public class KafkaSender {
         producer.send(keyMsg);
     }
 
+    public void send(String topic, byte[] msg) {
+        KeyedMessage<String, byte[]> keyMsg = new KeyedMessage<String, byte[]>(topic, null, msg);
+        producer.send(keyMsg);
+    }
+
     public void send(List<byte[]> msgs) {
         List<KeyedMessage<String, byte[]>> keyMsgs = new ArrayList<KeyedMessage<String, byte[]>>();
         for(byte[] msg : msgs) {
@@ -45,17 +50,16 @@ public class KafkaSender {
         producer.send(keyMsgs);
     }
 
-    public void send(String topic, byte[] msg) {
-        KeyedMessage<String, byte[]> keyMsg = new KeyedMessage<String, byte[]>(topic, null, msg);
-        producer.send(keyMsg);
-    }
-
     public void send(String topic, List<byte[]> msgs) {
         List<KeyedMessage<String, byte[]>> keyMsgs = new ArrayList<KeyedMessage<String, byte[]>>();
         for(byte[] msg : msgs) {
             KeyedMessage<String, byte[]> keyMsg = new KeyedMessage<String, byte[]>(topic, null, msg);
             keyMsgs.add(keyMsg);
         }
+        producer.send(keyMsgs);
+    }
+
+    public void sendKeyMsg(List<KeyedMessage<String, byte[]>> keyMsgs) {
         producer.send(keyMsgs);
     }
 
